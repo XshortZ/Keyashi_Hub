@@ -1,175 +1,294 @@
--- Keyashi Hub v1
--- เขียนโดย ChatGPT เพื่อใช้เป็น UI Library เหมือน Kavo UI
+-- Keyashi_HUB.lua
+-- Roblox UI Library (Inspired by Kavo UI) - Fully Renamed Version
+-- By: YourNameHere
 
-local KeyashiHub = {}
-KeyashiHub.__index = KeyashiHub
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
--- 🖌 ตัวช่วยสร้าง Instance
-local function create(class, props)
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local Keyashi_HUB = {}
+Keyashi_HUB.__index = Keyashi_HUB
+
+local DefaultTheme = {
+    Background = Color3.fromRGB(30, 30, 30),
+    Side = Color3.fromRGB(22, 22, 22),
+    Accent = Color3.fromRGB(98, 165, 255),
+    Button = Color3.fromRGB(50, 50, 50),
+    Text = Color3.fromRGB(235, 235, 235),
+}
+
+-- =====================
+-- Helper Functions
+-- =====================
+local function new(name, class)
     local obj = Instance.new(class)
-    for k, v in pairs(props) do
-        obj[k] = v
-    end
+    obj.Name = name
     return obj
 end
 
--- 🌟 Main Window
-function KeyashiHub:CreateMain(title)
-    local screenGui = create("ScreenGui", {Name = title, Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")})
-    local mainFrame = create("Frame", {
-        Size = UDim2.new(0, 400, 0, 300),
-        Position = UDim2.new(0.5, -200, 0.5, -150),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-        BorderSizePixel = 0,
-        Parent = screenGui
-    })
-    create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = mainFrame})
+local function applyCorner(inst, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 6)
+    c.Parent = inst
+    return c
+end
 
-    local titleBar = create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-        Text = title,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = mainFrame
-    })
-    create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = titleBar})
+local function applyStroke(inst, thickness)
+    local s = Instance.new("UIStroke")
+    s.Thickness = thickness or 1
+    s.Parent = inst
+    return s
+end
 
-    local tabHolder = create("Frame", {
-        Size = UDim2.new(0, 100, 1, -30),
-        Position = UDim2.new(0, 0, 0, 30),
-        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
-        Parent = mainFrame
-    })
+local function setFont(obj)
+    obj.Font = Enum.Font.Gotham
+    obj.TextSize = 14
+    obj.TextColor3 = DefaultTheme.Text
+end
 
-    local contentFrame = create("Frame", {
-        Size = UDim2.new(1, -100, 1, -30),
-        Position = UDim2.new(0, 100, 0, 30),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-        Parent = mainFrame
-    })
+local function makeDraggable(frame, dragger)
+    dragger = dragger or frame
+    frame.Active = true
+    frame.Selectable = true
+    local dragging, dragInput, mousePos, framePos
 
-    create("UIListLayout", {Parent = tabHolder, SortOrder = Enum.SortOrder.LayoutOrder})
+    local function update(input)
+        local delta = input.Position - mousePos
+        frame.Position = UDim2.new(
+            framePos.X.Scale, framePos.X.Offset + delta.X,
+            framePos.Y.Scale, framePos.Y.Offset + delta.Y
+        )
+    end
 
-    self.MainFrame = mainFrame
-    self.TabHolder = tabHolder
-    self.ContentFrame = contentFrame
+    dragger.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            mousePos = input.Position
+            framePos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    dragger.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+-- =====================
+-- Main UI Creation
+-- =====================
+function Keyashi_HUB:Create(title)
+    local self = setmetatable({}, Keyashi_HUB)
+    self.Title = title or "Keyashi_HUB"
+    self.Theme = DefaultTheme
     self.Tabs = {}
+
+    local screenGui = new("Keyashi_HUB_ScreenGui", "ScreenGui")
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+    self.ScreenGui = screenGui
+
+    local main = new("MainFrame", "Frame")
+    main.Size = UDim2.new(0, 520, 0, 360)
+    main.Position = UDim2.new(0.5, -260, 0.5, -180)
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.BackgroundColor3 = self.Theme.Background
+    main.Parent = screenGui
+    applyCorner(main, 10)
+    applyStroke(main, 1)
+
+    local titleBar = new("TitleBar", "Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 36)
+    titleBar.BackgroundTransparency = 1
+    titleBar.Parent = main
+
+    local titleLabel = new("TitleLabel", "TextLabel")
+    titleLabel.Size = UDim2.new(1, -16, 1, 0)
+    titleLabel.Position = UDim2.new(0, 8, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = self.Title
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    setFont(titleLabel)
+    titleLabel.TextSize = 16
+    titleLabel.Parent = titleBar
+
+    local side = new("SidePanel", "Frame")
+    side.Size = UDim2.new(0, 120, 1, -36)
+    side.Position = UDim2.new(0, 0, 0, 36)
+    side.BackgroundColor3 = self.Theme.Side
+    side.Parent = main
+    applyCorner(side, 8)
+
+    local contentArea = new("ContentArea", "Frame")
+    contentArea.Size = UDim2.new(1, -120, 1, -36)
+    contentArea.Position = UDim2.new(0, 120, 0, 36)
+    contentArea.BackgroundTransparency = 1
+    contentArea.Parent = main
+
+    local sideList = new("SideList", "UIListLayout")
+    sideList.Parent = side
+    sideList.SortOrder = Enum.SortOrder.LayoutOrder
+    sideList.Padding = UDim.new(0, 6)
+
+    self.Main = main
+    self.TitleBar = titleBar
+    self.Side = side
+    self.Content = contentArea
+    self.SideList = sideList
+
+    makeDraggable(main, titleBar)
     return self
 end
 
--- 📂 สร้าง Tab
-function KeyashiHub:CreateTab(tabName)
-    local tabBtn = create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 30),
-        Text = tabName,
-        BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = self.TabHolder
-    })
+function Keyashi_HUB:CreateTab(tabName)
+    local tab = {}
+    tab.Name = tabName or "Tab"
+    tab.Items = {}
 
-    local tabFrame = create("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Visible = false,
-        Parent = self.ContentFrame
-    })
-    create("UIListLayout", {Parent = tabFrame, Padding = UDim.new(0, 5)})
+    local btn = new(tabName .. "Button", "TextButton")
+    btn.Size = UDim2.new(1, -12, 0, 34)
+    btn.BackgroundColor3 = self.Theme.Button
+    btn.Text = tabName
+    btn.AutoButtonColor = false
+    btn.Parent = self.Side
+    applyCorner(btn, 6)
+    setFont(btn)
 
-    tabBtn.MouseButton1Click:Connect(function()
+    local frame = new(tabName .. "Frame", "ScrollingFrame")
+    frame.Size = UDim2.new(1, -20, 1, -20)
+    frame.BackgroundTransparency = 1
+    frame.CanvasSize = UDim2.new(0, 0, 1, 0)
+    frame.Visible = false
+    frame.Parent = self.Content
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = frame
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 8)
+
+    btn.MouseButton1Click:Connect(function()
         for _, t in pairs(self.Tabs) do
             t.Frame.Visible = false
+            t.Button.BackgroundColor3 = self.Theme.Button
         end
-        tabFrame.Visible = true
+        frame.Visible = true
+        btn.BackgroundColor3 = self.Theme.Accent
     end)
 
-    table.insert(self.Tabs, {Name = tabName, Button = tabBtn, Frame = tabFrame})
+    if #self.Tabs == 0 then
+        frame.Visible = true
+        btn.BackgroundColor3 = self.Theme.Accent
+    end
 
-    return setmetatable({
-        Frame = tabFrame
-    }, {
-        __index = function(_, key)
-            return KeyashiHub[key]
-        end
-    })
+    tab.Button = btn
+    tab.Frame = frame
+    tab.Layout = layout
+    table.insert(self.Tabs, tab)
+    return tab
 end
 
--- 🔘 Add Button
-function KeyashiHub:AddButton(text, callback)
-    local btn = create("TextButton", {
-        Size = UDim2.new(1, -10, 0, 30),
-        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
-        Text = text,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = self.Frame
-    })
+function Keyashi_HUB:CreateLabel(tab, text)
+    local lbl = new("Label", "TextLabel")
+    lbl.Size = UDim2.new(1, -18, 0, 26)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text or "Label"
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    setFont(lbl)
+    lbl.Parent = tab.Frame
+    return lbl
+end
+
+function Keyashi_HUB:CreateButton(tab, text, callback)
+    local btn = new("Button", "TextButton")
+    btn.Size = UDim2.new(1, -18, 0, 32)
+    btn.BackgroundColor3 = self.Theme.Button
+    btn.Text = text or "Button"
+    setFont(btn)
+    applyCorner(btn, 6)
+    applyStroke(btn, 1)
+    btn.Parent = tab.Frame
+
     btn.MouseButton1Click:Connect(function()
-        if callback then pcall(callback) end
+        if callback then callback() end
     end)
+    return btn
 end
 
--- ✅ Add Toggle
-function KeyashiHub:AddToggle(text, default, callback)
+function Keyashi_HUB:CreateToggle(tab, text, default, callback)
+    local toggle = new("Toggle", "TextButton")
+    toggle.Size = UDim2.new(1, -18, 0, 32)
+    toggle.BackgroundColor3 = self.Theme.Button
+    toggle.Text = ""
+    toggle.AutoButtonColor = false
+    applyCorner(toggle, 6)
+    applyStroke(toggle, 1)
+    toggle.Parent = tab.Frame
+
+    local lbl = new("ToggleLabel", "TextLabel")
+    lbl.Size = UDim2.new(1, -40, 1, 0)
+    lbl.Position = UDim2.new(0, 8, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text or "Toggle"
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    setFont(lbl)
+    lbl.Parent = toggle
+
+    local indicator = new("Indicator", "Frame")
+    indicator.Size = UDim2.new(0, 20, 0, 20)
+    indicator.Position = UDim2.new(1, -28, 0.5, -10)
+    indicator.BackgroundColor3 = default and self.Theme.Accent or Color3.fromRGB(80, 80, 80)
+    applyCorner(indicator, 4)
+    indicator.Parent = toggle
+
     local state = default or false
-    local btn = create("TextButton", {
-        Size = UDim2.new(1, -10, 0, 30),
-        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
-        Text = text .. ": " .. tostring(state),
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Parent = self.Frame
-    })
-    btn.MouseButton1Click:Connect(function()
+    toggle.MouseButton1Click:Connect(function()
         state = not state
-        btn.Text = text .. ": " .. tostring(state)
-        if callback then pcall(callback, state) end
+        indicator.BackgroundColor3 = state and self.Theme.Accent or Color3.fromRGB(80, 80, 80)
+        if callback then callback(state) end
     end)
+    return toggle
 end
 
--- 📏 Add Slider
-function KeyashiHub:AddSlider(text, min, max, default, callback)
-    local value = default or min
-    local label = create("TextLabel", {
-        Size = UDim2.new(1, -10, 0, 20),
-        Text = text .. ": " .. tostring(value),
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1,
-        Parent = self.Frame
-    })
-    local slider = create("TextButton", {
-        Size = UDim2.new(1, -10, 0, 20),
-        BackgroundColor3 = Color3.fromRGB(70, 70, 70),
-        Parent = self.Frame
-    })
-    slider.MouseButton1Down:Connect(function()
-        local moveConn
-        moveConn = game:GetService("UserInputService").InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
-                local pos = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-                value = math.floor((min + (max - min) * pos))
-                label.Text = text .. ": " .. tostring(value)
-                if callback then pcall(callback, value) end
-            end
-        end)
-        game:GetService("UserInputService").InputEnded:Connect(function(endInput)
-            if endInput.UserInputType == Enum.UserInputType.MouseButton1 then
-                if moveConn then moveConn:Disconnect() end
-            end
-        end)
+function Keyashi_HUB:CreateTextbox(tab, placeholder, callback)
+    local box = new("Textbox", "TextBox")
+    box.Size = UDim2.new(1, -18, 0, 32)
+    box.BackgroundColor3 = self.Theme.Button
+    box.PlaceholderText = placeholder or "Enter text..."
+    box.Text = ""
+    setFont(box)
+    applyCorner(box, 6)
+    applyStroke(box, 1)
+    box.ClearTextOnFocus = false
+    box.Parent = tab.Frame
+
+    box.FocusLost:Connect(function(enterPressed)
+        if enterPressed and callback then
+            callback(box.Text)
+        end
     end)
+    return box
 end
 
--- 📝 Add Textbox
-function KeyashiHub:AddTextbox(placeholder, callback)
-    local box = create("TextBox", {
-        Size = UDim2.new(1, -10, 0, 30),
-        PlaceholderText = placeholder or "",
-        Text = "",
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-        Parent = self.Frame
-    })
-    box.FocusLost:Connect(function(enter)
-        if enter and callback then pcall(callback, box.Text) end
-    end)
+function Keyashi_HUB:SetTheme(themeTable)
+    for k, v in pairs(themeTable) do
+        if self.Theme[k] then
+            self.Theme[k] = v
+        end
+    end
 end
 
-return setmetatable({}, KeyashiHub)
+return Keyashi_HUB
