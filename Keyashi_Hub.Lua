@@ -22,6 +22,8 @@ local DefaultTheme = {
 -- =====================
 -- Helper Functions
 -- =====================
+
+
 local function new(name, class)
     local obj = Instance.new(class)
     obj.Name = name
@@ -211,6 +213,67 @@ function Keyashi_HUB:CreateLabel(tab, text)
     lbl.Parent = tab.Frame
     return lbl
 end
+
+function Library:CreateSlider(tab, text, min, max, default, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -10, 0, 40)
+    sliderFrame.BackgroundTransparency = 1
+    sliderFrame.Parent = tab
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.BackgroundTransparency = 1
+    label.Text = text .. ": " .. default
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 18
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Parent = sliderFrame
+
+    local slider = Instance.new("TextButton")
+    slider.Size = UDim2.new(1, 0, 0, 20)
+    slider.Position = UDim2.new(0, 0, 0, 20)
+    slider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    slider.Text = ""
+    slider.Parent = sliderFrame
+
+    local fill = Instance.new("Frame")
+    fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.Parent = slider
+
+    local userInput = game:GetService("UserInputService")
+    local dragging = false
+
+    local function updateFill(x)
+        local relative = math.clamp((x - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
+        fill.Size = UDim2.new(relative, 0, 1, 0)
+        local value = math.floor(min + (max - min) * relative)
+        label.Text = text .. ": " .. value
+        if callback then
+            callback(value)
+        end
+    end
+
+    slider.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+
+    userInput.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    userInput.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateFill(input.Position.X)
+        end
+    end)
+
+    -- ตั้งค่า default
+    updateFill(slider.AbsolutePosition.X + slider.AbsoluteSize.X * ((default - min) / (max - min)))
+end
+
 
 function Keyashi_HUB:CreateButton(tab, text, callback)
     local btn = new("Button", "TextButton")
